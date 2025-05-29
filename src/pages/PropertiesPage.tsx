@@ -1,50 +1,21 @@
-
 import { useState, useMemo } from 'react';
-import { mockProperties } from '@/data/mockProperties';
+import { useProperties } from '@/hooks/useProperties';
 import PropertyCard from '@/components/PropertyCard';
 import { PropertyFilters } from '@/types/property';
-import { Search, Filter } from 'lucide-react';
+import { Search, Filter, Loader2 } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const PropertiesPage = () => {
   const [filters, setFilters] = useState<PropertyFilters>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
 
-  const filteredProperties = useMemo(() => {
-    return mockProperties.filter(property => {
-      // Search query filter
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        const matchesQuery = 
-          property.title.toLowerCase().includes(query) ||
-          property.address.toLowerCase().includes(query) ||
-          property.city.toLowerCase().includes(query) ||
-          property.description.toLowerCase().includes(query);
-        if (!matchesQuery) return false;
-      }
+  const queryFilters = useMemo(() => ({
+    ...filters,
+    searchQuery: searchQuery || undefined,
+  }), [filters, searchQuery]);
 
-      // Price filter
-      if (filters.priceMin && property.price < filters.priceMin) return false;
-      if (filters.priceMax && property.price > filters.priceMax) return false;
-
-      // Bedrooms filter
-      if (filters.bedrooms && property.bedrooms < filters.bedrooms) return false;
-
-      // Bathrooms filter
-      if (filters.bathrooms && property.bathrooms < filters.bathrooms) return false;
-
-      // Property type filter
-      if (filters.propertyType && property.propertyType !== filters.propertyType) return false;
-
-      // Listing type filter
-      if (filters.listingType && property.listingType !== filters.listingType) return false;
-
-      // City filter
-      if (filters.city && !property.city.toLowerCase().includes(filters.city.toLowerCase())) return false;
-
-      return true;
-    });
-  }, [mockProperties, filters, searchQuery]);
+  const { data: properties = [], isLoading, error } = useProperties(queryFilters);
 
   const handleFilterChange = (key: keyof PropertyFilters, value: any) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -55,6 +26,20 @@ const PropertiesPage = () => {
     setSearchQuery('');
   };
 
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 pt-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <Alert variant="destructive">
+            <AlertDescription>
+              Error loading properties. Please try again later.
+            </AlertDescription>
+          </Alert>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 pt-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -62,7 +47,7 @@ const PropertiesPage = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-4">Properties</h1>
           <p className="text-gray-600">
-            Showing {filteredProperties.length} of {mockProperties.length} properties
+            {isLoading ? 'Loading...' : `Showing ${properties.length} properties`}
           </p>
         </div>
 
@@ -196,14 +181,22 @@ const PropertiesPage = () => {
           )}
         </div>
 
+        {/* Loading State */}
+        {isLoading && (
+          <div className="flex justify-center items-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            <span className="ml-2 text-gray-600">Loading properties...</span>
+          </div>
+        )}
+
         {/* Properties Grid */}
-        {filteredProperties.length > 0 ? (
+        {!isLoading && properties.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredProperties.map((property) => (
+            {properties.map((property) => (
               <PropertyCard key={property.id} property={property} />
             ))}
           </div>
-        ) : (
+        ) : !isLoading && (
           <div className="text-center py-12">
             <p className="text-gray-500 text-lg mb-4">No properties found matching your criteria.</p>
             <button

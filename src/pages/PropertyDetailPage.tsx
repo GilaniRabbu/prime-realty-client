@@ -1,20 +1,36 @@
 
 import { useParams, Link } from 'react-router-dom';
 import { useState } from 'react';
-import { mockProperties } from '@/data/mockProperties';
-import { ArrowLeft, Bed, House, MapPin, Calendar, User, Phone } from 'lucide-react';
+import { useProperty } from '@/hooks/useProperties';
+import { ArrowLeft, Bed, House, MapPin, Calendar, User, Phone, Loader2 } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const PropertyDetailPage = () => {
   const { id } = useParams();
-  const property = mockProperties.find(p => p.id === id);
+  const { data: property, isLoading, error } = useProperty(id || '');
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showContactForm, setShowContactForm] = useState(false);
 
-  if (!property) {
+  if (isLoading) {
+    return (
+      <div className="min-h-screen pt-16 flex items-center justify-center">
+        <div className="flex items-center">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600 mr-2" />
+          <span>Loading property...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !property) {
     return (
       <div className="min-h-screen pt-16 flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Property Not Found</h1>
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>
+              Property not found or error loading property details.
+            </AlertDescription>
+          </Alert>
           <Link
             to="/properties"
             className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
@@ -36,10 +52,6 @@ const PropertyDetailPage = () => {
     return listingType === 'rent' ? `${formatted}/mo` : formatted;
   };
 
-  const relatedProperties = mockProperties
-    .filter(p => p.id !== property.id && p.city === property.city)
-    .slice(0, 3);
-
   return (
     <div className="min-h-screen bg-gray-50 pt-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -59,7 +71,7 @@ const PropertyDetailPage = () => {
             <div className="bg-white rounded-lg shadow-md overflow-hidden mb-8">
               <div className="relative h-96">
                 <img
-                  src={property.images[currentImageIndex]}
+                  src={property.images[currentImageIndex] || '/placeholder.svg'}
                   alt={property.title}
                   className="w-full h-full object-cover"
                 />
@@ -195,7 +207,7 @@ const PropertyDetailPage = () => {
               <div className="space-y-3 mb-6">
                 <div className="flex items-center text-gray-600">
                   <Phone className="h-5 w-5 mr-3" />
-                  <span>{property.agent.phone}</span>
+                  <span>{property.agent.phone || 'Not provided'}</span>
                 </div>
                 <div className="flex items-center text-gray-600">
                   <span className="w-5 h-5 mr-3 flex items-center justify-center">@</span>
@@ -244,37 +256,6 @@ const PropertyDetailPage = () => {
                 </div>
               )}
             </div>
-
-            {/* Similar Properties */}
-            {relatedProperties.length > 0 && (
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Similar Properties</h3>
-                <div className="space-y-4">
-                  {relatedProperties.map((prop) => (
-                    <Link
-                      key={prop.id}
-                      to={`/property/${prop.id}`}
-                      className="block border border-gray-200 rounded-lg p-3 hover:border-blue-300 transition-colors"
-                    >
-                      <div className="flex space-x-3">
-                        <img
-                          src={prop.images[0]}
-                          alt={prop.title}
-                          className="w-16 h-16 object-cover rounded-md"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-medium text-gray-900 truncate">{prop.title}</h4>
-                          <p className="text-sm text-gray-600 truncate">{prop.city}</p>
-                          <p className="text-sm font-semibold text-blue-600">
-                            {formatPrice(prop.price, prop.listingType)}
-                          </p>
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
